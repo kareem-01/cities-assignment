@@ -82,5 +82,6 @@ class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: Ge
 
     override fun clearSearchQuery() {
         updateState { copy(searchQuery = "") }
+        queryChannel.trySend("")
     }
 }
