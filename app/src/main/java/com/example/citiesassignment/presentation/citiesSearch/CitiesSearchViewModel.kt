@@ -1,5 +1,6 @@
 package com.example.citiesassignment.presentation.citiesSearch
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.citiesassignment.cityBinarySearch
@@ -7,6 +8,7 @@ import com.example.citiesassignment.data.models.City
 import com.example.citiesassignment.domain.GetCitiesUseCase
 import com.example.citiesassignment.mergeSort
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -29,19 +32,30 @@ class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: Ge
 
     init {
         viewModelScope.launch {
-            getCitiesUseCase().also { cities ->
-                updateState { copy(allCities = cities, isLoading = false) }
-                state.value.allCities.mergeSort().also { sortedCities ->
-                    updateState { copy(searchedCities = sortedCities, allCities = sortedCities) }
+            withContext(Dispatchers.IO) {
+                getCitiesUseCase().also { cities ->
+                    Log.d("cities_search", cities.toString())
+                    updateState { copy(allCities = cities) }
+                    state.value.allCities.mergeSort().also { sortedCities ->
+                        updateState {
+                            copy(
+                                searchedCities = sortedCities,
+                                allCities = sortedCities,
+                                isLoading = false,
+                            )
+                        }
+                    }
                 }
             }
             queryChannel
                 .consumeAsFlow()
-                .debounce(600)
+                .debounce(800)
                 .collectLatest { query ->
                     updateState { copy(isLoading = true) }
                     search(query)
                 }
+
+
         }
     }
 
