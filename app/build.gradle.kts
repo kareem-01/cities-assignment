@@ -1,5 +1,3 @@
-import com.google.devtools.ksp.gradle.model.Ksp
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -73,4 +71,5 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation)
 }
