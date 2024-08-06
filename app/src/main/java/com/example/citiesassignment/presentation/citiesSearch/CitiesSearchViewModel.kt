@@ -1,8 +1,8 @@
 package com.example.citiesassignment.presentation.citiesSearch
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.citiesassignment.cityBinarySearch
 import com.example.citiesassignment.data.models.City
 import com.example.citiesassignment.domain.GetCitiesUseCase
 import com.example.citiesassignment.mergeSort
@@ -20,46 +20,67 @@ import javax.inject.Inject
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: GetCitiesUseCase) :
-    ViewModel() {
+    ViewModel(), CitySearchListener {
     private val _state = MutableStateFlow(CitiesSearchUiState())
     val state = _state.asStateFlow()
     private val queryChannel = Channel<String>(Channel.CONFLATED)
     private var sortedCities: List<City>? = null
+    private var previousQuery: String = ""
 
     init {
         viewModelScope.launch {
             getCitiesUseCase().also { cities ->
-                updateState { copy(allCities = cities) }
-                Log.d("sorted_cities", "before")
-                val timeBefore = System.currentTimeMillis()
-                sortedCities = cities.mergeSort()
-//                val timeAfter = System.currentTimeMillis()
-//                Log.d("sorted_cities", sortedCities.toString())
-//                Log.d("sorted_cities", (timeAfter - timeBefore).toString())
-
+                updateState { copy(allCities = cities, isLoading = false) }
+                state.value.allCities.mergeSort().also { sortedCities ->
+                    updateState { copy(searchedCities = sortedCities, allCities = sortedCities) }
+                }
             }
             queryChannel
                 .consumeAsFlow()
-                .debounce(800)
+                .debounce(600)
                 .collectLatest { query ->
-                    if (query.isNotEmpty()) {
-                        updateState { copy(isLoading = true) }
-                        search(query)
-                    }
+                    updateState { copy(isLoading = true) }
+                    search(query)
                 }
         }
     }
 
-    fun updateSearchQuery(query: String) {
-        updateState { copy(searchQuery = query) }
-        queryChannel.trySend(query)
-    }
 
     private fun search(query: String) {
+        if (query.isBlank()) {
+            updateState {
+                copy(searchedCities = allCities, isLoading = false)
+            }
+            previousQuery = ""
+            return
+        }
 
+        val cities = if (query.startsWith(previousQuery)) {
+            state.value.searchedCities
+        } else {
+            state.value.allCities
+        }
+        val result = cities.cityBinarySearch(query)
+        updateState {
+            copy(searchedCities = result ?: emptyList(), isLoading = false)
+        }
+        previousQuery = query
     }
 
     private fun updateState(reducer: CitiesSearchUiState.() -> CitiesSearchUiState) {
         _state.value = _state.value.reducer()
+    }
+
+    override fun onCitySelected(city: String) {
+        // TODO
+    }
+
+    override fun onCitySearchQueryChanged(query: String) {
+        updateState { copy(searchQuery = query) }
+        queryChannel.trySend(query)
+    }
+
+    override fun clearSearchQuery() {
+        updateState { copy(searchQuery = "") }
     }
 }
