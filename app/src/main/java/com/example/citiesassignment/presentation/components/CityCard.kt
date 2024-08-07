@@ -1,5 +1,6 @@
 package com.example.citiesassignment.presentation.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -14,16 +15,17 @@ import androidx.compose.ui.unit.dp
 import com.example.citiesassignment.data.models.City
 
 @Composable
-fun CityCard(city: City) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation()) {
+fun CityCard(city: City, onCityClick: (City) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth() .clickable { onCityClick(city) }, elevation = CardDefaults.cardElevation()) {
         Text(
             text = city.name + ", " + city.country,
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(start = 16.dp)
+            modifier = Modifier
+                .padding(start = 16.dp)
         )
         Text(
-            text = "coordinates: ${city.coordinates.lat}, ${city.coordinates.lon}",
+            text = "coordinates:  lat:${city.coordinates.lat}, long:${city.coordinates.lon}",
             modifier = Modifier
                 .padding(top = 8.dp, start = 16.dp)
                 .alpha(.7f),

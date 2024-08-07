@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,19 +26,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.citiesassignment.R
 import com.example.citiesassignment.noRippleClick
 import com.example.citiesassignment.presentation.components.CityCard
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun CitiesSearchScreen(viewModel: CitiesSearchViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     CitiesSearchContent(state, viewModel)
+    LaunchedEffect(key1 = state.isLoading) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is CitiesSearchEffect.OpenMap -> {
+                    startActivity(context, effect.intent, null)
+                }
+            }
+        }
+    }
 }
+
 
 @Composable
 private fun CitiesSearchContent(state: CitiesSearchUiState, listener: CitySearchListener) {
@@ -92,7 +107,10 @@ private fun CitiesSearchContent(state: CitiesSearchUiState, listener: CitySearch
             ) {
 
                 items(state.searchedCities.size) { index ->
-                    CityCard(city = state.searchedCities[index])
+                    CityCard(
+                        city = state.searchedCities[index],
+                        onCityClick = listener::onCitySelected
+                    )
                 }
 
                 if (state.searchedCities.isEmpty()) {

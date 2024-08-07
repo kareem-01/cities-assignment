@@ -1,5 +1,7 @@
 package com.example.citiesassignment.presentation.citiesSearch
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +13,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -27,8 +31,9 @@ class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: Ge
     private val _state = MutableStateFlow(CitiesSearchUiState())
     val state = _state.asStateFlow()
     private val queryChannel = Channel<String>(Channel.CONFLATED)
-    private var sortedCities: List<City>? = null
     private var previousQuery: String = ""
+    private val _effect: MutableSharedFlow<CitiesSearchEffect> = MutableSharedFlow()
+    val effect = _effect.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -85,8 +90,15 @@ class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: Ge
         _state.value = _state.value.reducer()
     }
 
-    override fun onCitySelected(city: String) {
-        // TODO
+    override fun onCitySelected(city: City) {
+        val geoIntentUri = Uri.parse("geo:${city.coordinates.lat},${city.coordinates.lon}")
+        val intent = Intent(Intent.ACTION_VIEW, geoIntentUri)
+        try {
+            intent.setPackage("com.google.android.apps.maps")
+
+        } catch (_: Exception) {
+        }
+        sendUiEffect(CitiesSearchEffect.OpenMap(intent))
     }
 
     override fun onCitySearchQueryChanged(query: String) {
@@ -97,5 +109,9 @@ class CitiesSearchViewModel @Inject constructor(private val getCitiesUseCase: Ge
     override fun clearSearchQuery() {
         updateState { copy(searchQuery = "") }
         queryChannel.trySend("")
+    }
+
+    private fun sendUiEffect(effect: CitiesSearchEffect) {
+        viewModelScope.launch { _effect.emit(effect) }
     }
 }
